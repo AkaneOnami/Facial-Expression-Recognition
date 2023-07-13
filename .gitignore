@@ -1,3 +1,7 @@
 # ignore the pic datasets
 datasets/cnn_train/
 datasets/cnn_val/
+
+# ignore
+models/cnn_model.pth
+models/__pycache__/
