@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 from models.ModelDefinition import *
@@ -15,9 +15,9 @@ train_path = './customDatasets/train_dataset.pt'
 val_path = './customDatasets/val_dataset.pt'
 
 # 设置训练参数
-batch_size = 100
-learning_rate = 0.001
-num_epochs = 10
+batch_size = 120
+learning_rate = 0.0008
+num_epochs = 30
 
 def main():
     
@@ -49,13 +49,18 @@ def main():
             loss.backward()
             optimizer.step()
 
-            if (i+1) % 100 == 0:
+            if (i+1) % 10 == 0:
                 print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'
                       .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
 
     # 保存模型
     model = model.to('cpu')
-    torch.save(model.state_dict(), 'cnn_model.pth')
+    torch.save(model.state_dict(), './models/cnn_model.pth')
+    
+    # 验证用
+    model=CNN()
+    model.load_state_dict(torch.load('./models/cnn_model.pth')) 
+    model.to(device) 
     
     # 验证模型
     model.eval()
@@ -100,6 +105,7 @@ def main():
     ax.set_title('confusion matrix') #标题
     ax.set_xlabel('predict') #x轴
     ax.set_ylabel('true') #y轴
+    plt.savefig('./images/matrix.jpg')
         
 if __name__ == '__main__':
     main()
