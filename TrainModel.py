@@ -3,11 +3,16 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+import matplotlib as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 from models.ModelDefinition import *
 
 # 设置设备
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-train_path = './custom_datasets.pt'
+# device = torch.device('cpu')
+train_path = './customDatasets/train_dataset.pt'
+val_path = './customDatasets/val_dataset.pt'
 
 # 设置训练参数
 batch_size = 100
@@ -51,7 +56,50 @@ def main():
     # 保存模型
     model = model.to('cpu')
     torch.save(model.state_dict(), 'cnn_model.pth')
+    
+    # 验证模型
+    model.eval()
+    
+    vaild_loss = []
+    vaild_ac = []
+    y_pred = []
+    
+    # 正确的数量
+    correct=0;
+    
+    with torch.no_grad():
+        val_dataset = torch.load(val_path)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
+        for i, (images, labels) in enumerate(val_loader):
+            # 将输入数据和标签移动到设备
+            images = images.to(device)
+            labels = labels.to(device)
 
+            # 前向传播
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            
+            pred = outputs.max(1,keepdim=True)[1]
+            y_pred += pred.view(pred.size()[0]).cpu().numpy().tolist()
+            correct += pred.eq(labels.view_as(pred)).sum().item()
+            
+    vaild_ac.append(correct/len(val_dataset)) 
+    vaild_loss.append(loss.item())
+    print("Test Loss {:.4f} Accuracy {}/{} ({:.0f}%)".format(loss,correct,len(val_dataset),100.*correct/len(val_dataset)))
+    
+    # 画热力图
+    emotion = ["angry","disgust","fear","happy","sad","surprised","neutral"]
+    sns.set()
+    f,ax=plt.subplots()
+    y_true = [emotion[i] for _,i in val_dataset]
+    y_pred = [emotion[i] for i in y_pred]
+    C2= confusion_matrix(y_true, y_pred, labels=["angry","disgust","fear","happy","sad","surprised","neutral"])#[0, 1, 2,3,4,5,6])
 
+    sns.heatmap(C2,annot=True ,fmt='.20g',ax=ax) #热力图
+
+    ax.set_title('confusion matrix') #标题
+    ax.set_xlabel('predict') #x轴
+    ax.set_ylabel('true') #y轴
+        
 if __name__ == '__main__':
     main()
