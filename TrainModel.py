@@ -7,6 +7,7 @@ from models.ModelDefinition import *
 
 # 设置设备
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+train_path = './custom_datasets.pt'
 
 # 设置训练参数
 batch_size = 100
@@ -15,9 +16,10 @@ num_epochs = 10
 
 def main():
     
-    # 加载训练数据集
-    train_dataset = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, # transfrom定义在模型中作为转换函数
-                                               download=True)
+    # # 加载训练数据集
+    # train_dataset = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, # transfrom定义在模型中作为转换函数
+    #                                            download=True)
+    train_dataset = torch.load(train_path)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
 
     # 初始化模型和损失函数

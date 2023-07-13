@@ -3,6 +3,11 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+from torch.utils.data import Dataset, DataLoader
+import cv2
+from PIL import Image
+import os
+import pandas as pd
 
 class CNN(nn.Module):
     def __init__(self):
@@ -24,8 +29,27 @@ class CNN(nn.Module):
         x = self.fc(x)
         return x
 
+class CustomDataset(Dataset):
+    def __init__(self, image_folder, csv_file, transform=None):
+        self.image_folder = image_folder
+        self.data = pd.read_csv(csv_file)
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        img_name = os.path.join(self.image_folder, self.data.iloc[idx, 0])
+        image = Image.open(img_name)
+        label = self.data.iloc[idx, 1]
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, label
+
 transform = transforms.Compose([
-    transforms.rezize((48,48)),
+    transforms.Resize((48,48)),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])

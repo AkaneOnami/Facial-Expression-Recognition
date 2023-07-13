@@ -4,26 +4,8 @@ from torch.utils.data import Dataset, DataLoader
 import cv2
 from PIL import Image
 import os
+import pandas as pd
 from models.ModelDefinition import *
-
-class CustomDataset(Dataset):
-    def __init__(self, image_folder, csv_file, transform=None):
-        self.image_folder = image_folder
-        self.data = cv2.read_csv(csv_file)
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        img_name = os.path.join(self.image_folder, self.data.iloc[idx, 0])
-        image = cv2.imread(img_name)
-        label = self.data.iloc[idx, 1]
-
-        if self.transform:
-            image = self.transform(image)
-
-        return image, label
 
 def main():
     
