@@ -17,29 +17,35 @@ val_path = './customDatasets/val_dataset.pt'
 # 设置训练参数
 batch_size = 120
 learning_rate = 0.0008
-num_epochs = 30
-
-train_lost=[]
-vaild_loss = []
-vaild_ac = []
-y_pred = []
+num_epochs = 50
 
 def main():
-    
+    # 判断是否数据增强，定义在ModelDdefinition内
+    global arugment
+
     # # 加载训练数据集
     # train_dataset = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, # transfrom定义在模型中作为转换函数
     #                                            download=True)
     train_dataset = torch.load(train_path)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
+    
+    train_loss=[]
+    valid_loss = []
+    valid_acc = []
 
     # 初始化模型和损失函数
-    model = CNN().to(device)
+    
+    # model = CNN().to(device)
+    model = ResNet(BasicBlock, [2, 2, 2, 2]).to(device)
+    
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # 开始训练
     total_step = len(train_loader)
     for epoch in range(num_epochs):
+        # 启用数据增强
+        arugment=True
         for i, (images, labels) in enumerate(train_loader):
             # 将输入数据和标签移动到设备
             images = images.to(device)
@@ -59,23 +65,82 @@ def main():
                 print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'
                       .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
         
-        train_lost.append(loss.item())
-
+        # 为了打印图像做的处理
+        arugment=False
+        train_loss.append(loss.item())
+        model.eval()
+        correct=0;
+        y_pred = []
+        with torch.no_grad():
+            val_dataset = torch.load(val_path)
+            val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
+            for i, (images, labels) in enumerate(val_loader):
+                # 将输入数据和标签移动到设备
+                images = images.to(device)
+                labels = labels.to(device)
+                
+                # 前向传播
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+                
+                pred = outputs.max(1,keepdim=True)[1]
+                y_pred += pred.view(pred.size()[0]).cpu().numpy().tolist()
+                correct += pred.eq(labels.view_as(pred)).sum().item()
+                
+        valid_acc.append(correct/len(val_dataset)) 
+        valid_loss.append(loss.item())
+        print("Test Loss {:.4f} Accuracy {}/{} ({:.0f}%)".format(loss,correct,len(val_dataset),100.*correct/len(val_dataset)))
+        model.train()
+    
     # 保存模型
     model = model.to('cpu')
     torch.save(model.state_dict(), './models/cnn_model.pth')
     
+    # 训练完成后打印图像
+    # 创建 x 轴数据
+    x = range(1, num_epochs + 1)
+    x_acc=range(1, num_epochs + 1)
+
+    # 绘制训练损失和验证损失曲线
+    plt.plot(x, train_loss, label='Train Loss')
+    plt.plot(x, valid_loss, label='Valid Loss')
+
+    # 添加图例和标签
+    plt.legend()
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+
+    # 显示图形
+    plt.savefig('./images/Loss-epoches.jpg')
+
+    # 绘制验证准确率曲线
+    plt.plot(x_acc, valid_acc, label='Valid Accuracy')
+
+    # 添加图例和标签
+    plt.legend()
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+
+    # 显示图形
+    plt.savefig('./images/Acc-epoches.jpg')
+    
     # 验证用
-    model=CNN()
+    # model=CNN()
+    model=ResNet(BasicBlock, [2, 2, 2, 2])
+    
     model.load_state_dict(torch.load('./models/cnn_model.pth')) 
     model.to(device) 
+    
+    arugment=False
     
     # 验证模型
     model.eval()
     
     # 正确的数量
     correct=0;
-    
+    valid_loss = []
+    valid_acc = []
+    y_pred = []
     with torch.no_grad():
         val_dataset = torch.load(val_path)
         val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
@@ -83,7 +148,7 @@ def main():
             # 将输入数据和标签移动到设备
             images = images.to(device)
             labels = labels.to(device)
-
+            
             # 前向传播
             outputs = model(images)
             loss = criterion(outputs, labels)
@@ -92,8 +157,8 @@ def main():
             y_pred += pred.view(pred.size()[0]).cpu().numpy().tolist()
             correct += pred.eq(labels.view_as(pred)).sum().item()
             
-    vaild_ac.append(correct/len(val_dataset)) 
-    vaild_loss.append(loss.item())
+    valid_acc.append(correct/len(val_dataset)) 
+    valid_loss.append(loss.item())
     print("Test Loss {:.4f} Accuracy {}/{} ({:.0f}%)".format(loss,correct,len(val_dataset),100.*correct/len(val_dataset)))
     
     # 画热力图
