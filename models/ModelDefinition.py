@@ -24,31 +24,33 @@ from torchvision.transforms import (
     RandomErasing
 )
 
-arugment=True
 
-if arugment==True:
-    transform = transforms.Compose([
-        transforms.Resize((48,48)),
+def get_transform(arugment=True):
+    if arugment==True:
+        transform = transforms.Compose([
+            transforms.Resize((48,48)),
 
-        RandomResizedCrop((48,48)),
-        ColorJitter(),
-        RandomAffine(degrees=0, translate=(0.1, 0.1)),
-        RandomHorizontalFlip(),
-        RandomRotation(degrees=10),
-        FiveCrop(size=40),
-        Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops])),
-        RandomErasing(),
-        
-        transforms.ToTensor(),
-        transforms.Normalize((0.5,), (0.5,))
-    ])
-else:
-    transform = transforms.Compose([
-        transforms.Resize((48,48)),
-        Grayscale(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5,), (0.5,))
-    ])
+            Grayscale(),
+            RandomResizedCrop((48,48)),
+            ColorJitter(),
+            RandomAffine(degrees=0, translate=(0.1, 0.1)),
+            RandomHorizontalFlip(),
+            RandomRotation(degrees=10),
+            FiveCrop(size=40),
+            Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops])),
+            RandomErasing(),
+            
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+        ])
+    else:
+        transform = transforms.Compose([
+            transforms.Resize((48,48)),
+            Grayscale(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+        ])
+    return transform
 
 class CNN(nn.Module):
     def __init__(self):
@@ -181,3 +183,5 @@ class ResNet(nn.Module):
  
 def ResNet18():
     return ResNet(BasicBlock, [2, 2, 2, 2])
+
+transform=get_transform()

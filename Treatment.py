@@ -9,6 +9,9 @@ import os
 from models.ModelDefinition import *
 
 def getSliceAndDraw(url='./videos/sample.mp4'):
+    global arugment
+    
+    arugment=False
     # 拉取视频
     video=cv2.VideoCapture(url)
     
@@ -16,12 +19,19 @@ def getSliceAndDraw(url='./videos/sample.mp4'):
     face_path='./xmls/haarcascade_frontalface_default.xml'
     face_cas=cv2.CascadeClassifier(face_path)
     face_cas.load(face_path)
-        
-    # 设置去背景函数
-    fgbg=cv2.createBackgroundSubtractorMOG2()
     
-    # 形态学kernel
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+    # 导入先前训练的模型
+    model=ResNet(BasicBlock, [2, 2, 2, 2])
+    model.load_state_dict(torch.load('./models/cnn_model.pth'))
+    model.eval()  # 将模型设置为评估模式
+    
+    emoji0=cv2.imread('./emoji/0-Angry.png')
+    emoji1=cv2.imread('./emoji/1-Disgust.png')
+    emoji2=cv2.imread('./emoji/2-Fear.png')
+    emoji3=cv2.imread('./emoji/3-Happy.png')
+    emoji4=cv2.imread('./emoji/4-Sad.png')
+    emoji5=cv2.imread('./emoji/5-Surprise.png')
+    emoji6=cv2.imread('./emoji/6-Neutral.png')
     
     while True:
         # 读取视频帧
@@ -44,7 +54,7 @@ def getSliceAndDraw(url='./videos/sample.mp4'):
         '''
         # 进行人脸和眼睛检测
         faceRects = face_cas.detectMultiScale(
-            cvt_img, scaleFactor=1.2, minNeighbors=4, minSize=(100, 100))
+            cvt_img, scaleFactor=1.2, minNeighbors=4, minSize=(15, 15))
         
         if len(faceRects) == 0:  # 如果获取失败
             # 只显示原始图像
@@ -61,55 +71,51 @@ def getSliceAndDraw(url='./videos/sample.mp4'):
             # 截取人脸图像用于识别表情
             face=frame[y:y+h, x:x+w]
             
-            # 人脸图像预处理
-            if not face:
-                break
-            
-            # 高斯去噪
-            blur = cv2.GaussianBlur(face, (7, 7), 5)
-            # 中值滤波
-            dst = cv2.medianBlur(blur, 5)
-            # 去背景, 去背景图像很乱
-            mask = fgbg.apply(dst)
-            # 腐蚀, 去掉图中的小方块，腐蚀后的图像干净许多, 但物体变小
-            erode = cv2.erode(mask, kernel)
-            # 膨胀, 还原使物体变大, 膨胀3次大一点
-            dilate = cv2.dilate(erode, kernel, iterations=3)
+            # # 高斯去噪
+            # blur = cv2.GaussianBlur(face, (7, 7), 5)
+            # # 中值滤波
+            # dst = cv2.medianBlur(blur, 5)
+            # # 腐蚀, 去掉图中的小方块，腐蚀后的图像干净许多, 但物体变小
+            # erode = cv2.erode(dst, kernel)
+            # # 膨胀, 还原使物体变大, 膨胀3次大一点
+            # dilate = cv2.dilate(erode, kernel, iterations=3)
             
             # 图像按照归一化 48*48的灰度图
             face=cv2.resize(face,(48,48))
-            
-            # 导入先前训练的模型
-            model=CNN()
-            model.load_state_dict(torch.load('./models/cnn_model.pth'))
-            
-            model.eval()  # 将模型设置为评估模式
+            face=Image.fromarray(face)
+            my_transform=get_transform(False)
+            face=my_transform(face)
+            face=torch.unsqueeze(face,dim=0) # 增加一维作为批次维度
             
             # 不启动梯度，即不使用该数据进行训练
             with torch.no_grad():
-                output = model(face.unsqueeze(0))  # 增加一维作为批次维度
+                output = model(face)
                 # 得到训练后的表情标签
                 predicted_label = torch.argmax(output, 1).item()
-                
+
             # 利用得到的标签将对应的emoji打回到目录中
             if predicted_label==0:
-                emoji=cv2.imread('./emoji/0-Angry.png')
+                emoji=emoji0
             elif predicted_label==1:
-                emoji=cv2.imread('./emoji/1-Disgust.png')
+                emoji=emoji1
             elif predicted_label==2:
-                emoji=cv2.imread('./emoji/2-Feart.png')
+                emoji=emoji2
             elif predicted_label==3:
-                emoji=cv2.imread('./emoji/3-Happy.png')
+                emoji=emoji3
             elif predicted_label==4:
-                emoji=cv2.imread('./emoji/4-Sad.png')
+                emoji=emoji4
             elif predicted_label==5:
-                emoji=cv2.imread('./emoji/5-Surprise.png')
+                emoji=emoji5
             elif predicted_label==6:
-                emoji=cv2.imread('./emoji/6-Neutral.png')
+                emoji=emoji6
             else:
-                emoji=cv2.imread('./emoji/6-Neutral.png')
+                emoji=emoji6
+                
+            confidence = torch.max(torch.softmax(output, dim=1)).item()
+            if confidence<0.70:
+                emoji=emoji6
             
-            if not emoji:
+            if emoji is None:
                 continue
             
             # 让emoji不要太大
@@ -119,15 +125,14 @@ def getSliceAndDraw(url='./videos/sample.mp4'):
             emoji_height, emoji_width, _ = emoji.shape     
             
             # 默认在人脸的左边显示
-            frame[y-emoji_height:y,x-emoji_width-20:x-20]=emoji
+            frame[y:y+emoji_height,x-100:x+emoji_width-100,:]=emoji[:,:,:]
             
             # 显示图像
             cv2.imshow('video',frame)
-            if cv2.waitKey(20) & 0xFF==27:
+            if cv2.waitKey(42) & 0xFF==27:
                 break
  
     video.release()      
-    cv2.destroyAllWindows('video')
 
 if __name__ == '__main__':
     getSliceAndDraw()

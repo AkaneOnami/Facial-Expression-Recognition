@@ -16,12 +16,11 @@ val_path = './customDatasets/val_dataset.pt'
 
 # 设置训练参数
 batch_size = 120
-learning_rate = 0.0008
-num_epochs = 50
+learning_rate = 0.001
+num_epochs = 20
 
 def main():
     # 判断是否数据增强，定义在ModelDdefinition内
-    global arugment
 
     # # 加载训练数据集
     # train_dataset = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, # transfrom定义在模型中作为转换函数
@@ -53,7 +52,6 @@ def main():
 
             # 前向传播
             outputs = model(images)
-
             loss = criterion(outputs, labels)
 
             # 反向传播和优化
@@ -98,31 +96,29 @@ def main():
     
     # 训练完成后打印图像
     # 创建 x 轴数据
+    # 创建 x 轴数据
     x = range(1, num_epochs + 1)
-    x_acc=range(1, num_epochs + 1)
 
-    # 绘制训练损失和验证损失曲线
-    plt.plot(x, train_loss, label='Train Loss')
-    plt.plot(x, valid_loss, label='Valid Loss')
-
-    # 添加图例和标签
-    plt.legend()
+    plt.plot(x, train_loss, label='Train Loss', color='blue')
+    plt.plot(x, valid_loss, label='Valid Loss', color='red')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
-
-    # 显示图形
+    plt.legend()
     plt.savefig('./images/Loss-epoches.jpg')
+    plt.close()
+    
+    # 创建 x 轴数据
+    x_acc = range(1, num_epochs + 1)
 
     # 绘制验证准确率曲线
-    plt.plot(x_acc, valid_acc, label='Valid Accuracy')
-
-    # 添加图例和标签
-    plt.legend()
+    plt.plot(x_acc, valid_acc, label='Valid Accuracy', color='green')
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
+    plt.legend()
 
-    # 显示图形
+    # 保存图像
     plt.savefig('./images/Acc-epoches.jpg')
+    plt.close()
     
     # 验证用
     # model=CNN()
