@@ -19,6 +19,11 @@ batch_size = 120
 learning_rate = 0.0008
 num_epochs = 30
 
+train_lost=[]
+vaild_loss = []
+vaild_ac = []
+y_pred = []
+
 def main():
     
     # # 加载训练数据集
@@ -42,6 +47,7 @@ def main():
 
             # 前向传播
             outputs = model(images)
+
             loss = criterion(outputs, labels)
 
             # 反向传播和优化
@@ -52,6 +58,8 @@ def main():
             if (i+1) % 10 == 0:
                 print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'
                       .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
+        
+        train_lost.append(loss.item())
 
     # 保存模型
     model = model.to('cpu')
@@ -64,10 +72,6 @@ def main():
     
     # 验证模型
     model.eval()
-    
-    vaild_loss = []
-    vaild_ac = []
-    y_pred = []
     
     # 正确的数量
     correct=0;
